@@ -26,12 +26,12 @@ I know, it's in Bash, but hey, it works.
 **Write all iRule logic in a way that it can be tested.**  
 
 When I started writing irule-tester, it quickly became obvious that some of 
-the existing iRule logic would need to be changed to support reliable testing.  
+the existing iRule logic would need to be changed to support reliable testing. 
 Because of this, I now believe that all iRule logic should be written in a 
-way that allows external testing and validation of each iRule operation.  
+way that allows external testing and validation of each iRule operation. 
 This presented a checken and egg scenario because some of the iRule logic 
 needed to be rewritten to support the testing, but I needed the testing to 
-validate that the changes were successful and didn't break anything.  
+validate that the changes were successful and didn't break anything. 
 To get through this, I created a function in irule-tester that just logs that 
 a given piece of iRule logic can't currently be tested.  This allows us to at 
 least get the majority of the logic tested and marks the part we can't as 
