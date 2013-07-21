@@ -2,7 +2,6 @@
 
 This is a tool to test F5 LTM iRule logic.
 
----
 
 ## Overview
 
@@ -113,21 +112,19 @@ serve the content for a requested URL
 	
 	}
 
----
+
 
 ## Supported Platforms
 
 This code was developed and tested using CentOS 5, but is assumed to work
 on other platforms as well.
 
----
 
 ## Dependencies
 
 * bash >= 3.2.25
 * curl >= 7.15.5
 
----
 
 ## Author
 
