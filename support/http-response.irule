@@ -1,0 +1,7 @@
+when HTTP_RESPONSE {
+	
+	# Insert LastSelectedPool cookie with the value of the selected pool to
+	# enable automated testing to identify if the LB made the expected decision
+	HTTP::cookie insert name "LastSelectedPool" value [LB::server pool]
+	
+}
