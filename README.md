@@ -1,7 +1,6 @@
 ## Description
 
-This is a tool to test F5 LTM iRule logic.
-
+This is a tool to test F5 LTM iRule logic
 
 ## Overview
 
@@ -12,14 +11,14 @@ This utility relies on two required components and has an optional third.
 3. Adding the http-response.irule to the site you want to test if you are not
    using cookie persistence (./support/http-response.irule - optional)
 
-### irule-tester library
+### - irule-tester library - 
 
 This is a bash script that contains default variables and the required 
 functions to make this whole thing come together.  The file is well documented 
 and contains sane defaults, but you may need to adjust the settings to fit 
 your environment.
 
-### test.sh
+### - test.sh -
 
 This is the file that contains your test cases.  The file can be named 
 anything you want.  I recommend having a seperate file per site that 
@@ -27,7 +26,7 @@ you want to test.
 
 **Usage:**
 
-  ./test.sh -s TARGET\_SITE
+	./test.sh -s target_site [ -o (plain|tap) ]
 
 **Example:**
 
@@ -50,6 +49,7 @@ will be added as they are required.
 
 	cannot_test 0001
 
+---
 
 `should_discard`
 
@@ -65,6 +65,7 @@ will be added as they are required.
 	
 	Note: the $targetSite variable is replaced by the value passed to test.sh with the -s switch
 
+---
 
 `should_redirect`
 
@@ -78,6 +79,7 @@ will be added as they are required.
 
 	should_redirect 0001 http://${targetSite}/original/location http://${targetSite}/new/location
 
+---
 
 `should_select_pool`
 
@@ -98,7 +100,7 @@ Note: You can also define a variable in the variables section at the top of test
 	should_select_pool 0001 http://${targetSite}/original/location $acmeContentPools
 
 
-### http-response.irule
+### - http-response.irule - 
 
 This iRule can be used to insert a cookie into all HTTP responses from pool 
 selections.  This enables irule-tester to identify which pool was used to 
@@ -112,7 +114,50 @@ serve the content for a requested URL
 	
 	}
 
+## Getting Started
 
+**Example normal test:**
+
+	./test.sh -s www.acme.com
+	
+**Example normal output:**
+
+		Testing www.acme.com
+
+	W - 0001 - logic not currently testable
+	P - 0002 - http://www.acme.com/evilpage.html
+		discarded request as expected
+	P - 0003 - http://www.acme.com/original/location1
+		redirects to http://www.24hourfitness.com/new/location1 as expected
+	P - 0004 - http://www.acme.com/original/location2
+		redirects to http://www.24hourfitness.com/new/location2 as expected
+	P - 0005 - http://www.acme.com/index.php
+		selected pool acme_prd_pool as expected
+	P - 0006 - http://www.acme.com/index.html
+		selected pool acme_prd_pool as expected
+	
+	Pass: 6, Warn: 1, Fail: 0, Total: 7
+	
+	Test took 5 seconds
+	
+**Example tap test:**
+
+	./test.sh -s www.acme.com
+	
+**Example tap output:**
+
+		Testing www.acme.com
+
+	not ok 0001 - #SKIP logic not currently testable
+	ok 0002 - http://www.acme.com/evilpage.html -
+	ok 0003 - http://www.acme.com/original/location1 -
+	ok 0004 - http://www.acme.com/original/location2 -
+	ok 0005 - http://www.acme.com/index.php -
+	ok 0006 - http://www.acme.com/index.html -
+	
+	Pass: 6, Warn: 1, Fail: 0, Total: 7
+	
+	Test took 5 seconds
 
 ## Supported Platforms
 
