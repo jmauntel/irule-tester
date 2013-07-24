@@ -10,7 +10,7 @@
 
 # irule-tester version number
 
-typeset -r version='0.1.0'
+typeset -r version='0.1.1'
 
 # Collect the current time to use for test duration calculation
 
@@ -18,11 +18,11 @@ typeset -r startTime=$(date +%s)
 
 # Define output color variables
 
-typeset  NORMAL='\033[0m'
-typeset  RED='\033[1;31;40m'
-typeset  GREEN='\033[1;32;40m'
-typeset  YELLOW='\033[1;33;40m'
-typeset  ORANGE='\033[1;38;130m'
+typeset -r NORMAL='\033[0m'
+typeset -r RED='\033[1;31;40m'
+typeset -r GREEN='\033[1;32;40m'
+typeset -r YELLOW='\033[1;33;40m'
+typeset -r ORANGE='\033[1;38;130m'
 
 # Base curl command.  Leverages -s (silent mode) and -S (show errors even 
 # when asked to be silent).
@@ -36,7 +36,7 @@ typeset -r curlCmd='/usr/bin/curl -s -S'
 typeset -r defaultAgent='F5 iRule Tester'
 
 # Set the current user agent from the defaultAgent.  This variable may be 
-# overridden in the test case file.
+# overridden in the test case file to test different cases based on user agent.
 
 typeset userAgent="${defaultAgent}"
 
@@ -80,7 +80,8 @@ typeset -r connectTimeout='5'
 
 function printUsage {
 
-   printf "${RED}\nirule-tester, version $version\n\nUsage: $(basename $0) -s target_site [ -o (plain|tap) ]\n\n${NORMAL}"
+   printf "${NORMAL}\nirule-tester, version $version\n\n"
+   printf "Usage: $(basename $0) -s target_site [ -o (plain|tap) ]\n\n${NORMAL}"
 
 }
 
@@ -145,9 +146,7 @@ function should_discard {
   }
 }
 
-# This function tests if the requested URL redirects as expected.  If the
-# requested URL is discarded, the request will timeout after the number of
-# seconds defined in the connectTimeout variable.
+# This function tests if the requested URL redirects as expected.
 #
 # Required arguments:
 #   1) Test case ID
@@ -172,10 +171,23 @@ function should_redirect {
   [[ "$destUri" == "$location" ]] && {
     printMsg "INFO" "$testCase" "$reqUrl" "redirects to $location as expected"
     ((passCount++))
-    check_for_sorry $reqUrl
-    check_for_asm $reqUrl
+
+    [[ $checkAsm == 1 ]] && check_for_asm $reqUrl && {
+      ((warnCount++))
+      printMsg "WARN" "$testCase" "$reqUrl" "content matches 'ASM' block page"
+      return
+    }
+
+    [[ $checkSorry == 1 ]] && check_for_sorry $reqUrl && {
+      ((warnCount++))
+      printMsg "WARN" "$testCase" "$reqUrl" "content matches 'Sorry' page"
+      return
+    }
+
     return
+
   } || {
+
     printMsg "ERROR" "$testCase" "$reqUrl" "expected redirect to $destUri but found $location"
     ((failCount++))
     return
