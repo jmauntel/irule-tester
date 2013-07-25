@@ -142,7 +142,7 @@ serve the content for a requested URL
 	
 **Example tap test:**
 
-	./test.sh -s www.acme.com
+	./test.sh -s www.acme.com -o tap
 	
 **Example tap output:**
 
