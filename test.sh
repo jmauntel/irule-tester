@@ -27,3 +27,4 @@ should_select_pool 0006 http://${targetSite}/index.html $acmeContentPools
 
 report_results
 [[ "$failCount" -gt "0" ]] && exit 1 || exit 0
+

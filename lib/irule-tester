@@ -10,7 +10,7 @@
 
 # irule-tester version number
 
-typeset -r version='0.1.1'
+typeset -r version='0.2.0'
 
 # Collect the current time to use for test duration calculation
 
@@ -24,10 +24,15 @@ typeset -r GREEN='\033[1;32;40m'
 typeset -r YELLOW='\033[1;33;40m'
 typeset -r ORANGE='\033[1;38;130m'
 
+# Maximum number of seconds to wait for curl to successfully connect to a 
+# remote host
+
+typeset -r connectTimeout="10"
+
 # Base curl command.  Leverages -s (silent mode) and -S (show errors even 
 # when asked to be silent).
 
-typeset -r curlCmd='/usr/bin/curl -s -S'
+typeset -r curlCmd="/usr/bin/curl -s -S --connect-timeout ${connectTimeout}"
 
 # Set the default user agent.  This is necessary if the site is using an 
 # ASM for content blocking, or if the iRule logic uses user agent data to 
@@ -49,22 +54,26 @@ typeset warnCount='0'
 typeset failCount='0'
 
 # Enable/disable checking for custom sorry content page during testing.  
-# Enabling this feature requires a valid value for the sorryText variable.
+# Enabling this feature requires a valid value for the sorryText variable and 
+# that the -e switch be passed as an arguement
 
 typeset -r checkSorry='1'
 
 # Contains the source text that will match when the sorry content is returned
-# from a request.  Requires that the checkSorry variable be set to 1
+# from a request.  Requires that the checkSorry variable be set to 1 and 
+# that the -e switch be passed as an arguement
 
 typeset -r sorryText='Unfortunately, we are not able to process your request at this time. We apologize for any inconvenience'
 
 # Enable/disable checking for custom ASM block page during testing.  
-# Enabling this feature requires a valid value for the asmText variable.
+# Enabling this feature requires a valid value for the asmText variable and 
+# that the -e switch be passed as an arguement
 
 typeset -r checkAsm='1'
 
 # Contains the source text that will match when the ASM block page is returned
-# from a request.  Requires that the checkASM variable be set to 1
+# from a request.  Requires that the checkASM variable be set to 1 and 
+# that the -e switch be passed as an arguement
 
 typeset -r asmText='Your request was rejected due to a content exception'
 
@@ -81,13 +90,14 @@ typeset -r connectTimeout='5'
 function printUsage {
 
    printf "${NORMAL}\nirule-tester, version $version\n\n"
-   printf "Usage: $(basename $0) -s target_site [ -o (plain|tap) ]\n\n${NORMAL}"
+   printf "Usage: $(basename $0) -s target_site [ -o (plain|tap) ] [-e]\n\n${NORMAL}"
 
 }
 
 # Parse options
-while getopts ":o:s:" Option ; do
+while getopts ":eo:s:" Option ; do
   case $Option in
+    e ) extendedChecks=1 ;;
     o ) outputFormat=${OPTARG} ;;
     s ) targetSite=${OPTARG} ;;
     * ) printUsage && exit ;;
@@ -172,16 +182,20 @@ function should_redirect {
     printMsg "INFO" "$testCase" "$reqUrl" "redirects to $location as expected"
     ((passCount++))
 
-    [[ $checkAsm == 1 ]] && check_for_asm $reqUrl && {
-      ((warnCount++))
-      printMsg "WARN" "$testCase" "$reqUrl" "content matches 'ASM' block page"
-      return
-    }
+    [[ $extendedChecks == 1 ]] && {
 
-    [[ $checkSorry == 1 ]] && check_for_sorry $reqUrl && {
-      ((warnCount++))
-      printMsg "WARN" "$testCase" "$reqUrl" "content matches 'Sorry' page"
-      return
+      [[ $checkAsm == 1 ]] && check_for_asm $reqUrl && {
+        ((warnCount++))
+        printMsg "WARN" "$testCase" "$reqUrl" "content matches 'ASM' block page"
+        return
+      }
+  
+      [[ $checkSorry == 1 ]] && check_for_sorry $reqUrl && {
+        ((warnCount++))
+        printMsg "WARN" "$testCase" "$reqUrl" "content matches 'Sorry' page"
+        return
+      }
+
     }
 
     return
@@ -226,18 +240,36 @@ function should_select_pool {
     printMsg "INFO" "$testCase" "$reqUrl" "selected pool $selectedPool as expected"
     ((passCount++))
 
-    [[ $checkAsm == 1 ]] && check_for_asm $reqUrl && {
-      ((warnCount++))
-      printMsg "WARN" "$testCase" "$reqUrl" "content matches 'ASM' block page"
-      return
-    }
+    [[ $extendedChecks == 1 ]] && {
 
-    [[ $checkSorry == 1 ]] && check_for_sorry $reqUrl && {
-      ((warnCount++)) 
-      printMsg "WARN" "$testCase" "$reqUrl" "content matches 'Sorry' page"
+      [[ $checkAsm == 1 ]] && check_for_asm $reqUrl && {
+        ((warnCount++))
+        printMsg "WARN" "$testCase" "$reqUrl" "content matches 'ASM' block page"
+        return
+      }
+  
+      [[ $checkSorry == 1 ]] && check_for_sorry $reqUrl && {
+        ((warnCount++)) 
+        printMsg "WARN" "$testCase" "$reqUrl" "content matches 'Sorry' page"
+      }
+
     }
 
   }
+
+}
+
+# This function checks the source of the requested URL to see if it matches
+# the defined ASM block page
+#
+# Required arguments:
+#   1) The requested URL that should be sent to a pool
+
+function check_for_asm {
+
+  local reqUrl=$1
+
+  $curlCmd -L -A "$userAgent" $reqUrl | grep -q "$asmText"
 
 }
 
@@ -253,20 +285,6 @@ function check_for_sorry {
   local reqUrl=$1
 
   $curlCmd -L -A "$userAgent" $reqUrl | grep -q "$sorryText"
-
-}
-
-# This function checks the source of the requested URL to see if it matches
-# the defined ASM block page
-#
-# Required arguments:
-#   1) The requested URL that should be sent to a pool
-
-function check_for_asm {
-
-  local reqUrl=$1
-
-  $curlCmd -L -A "$userAgent" $reqUrl | grep -q "$asmText"
 
 }
 

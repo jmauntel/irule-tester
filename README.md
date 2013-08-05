@@ -2,6 +2,66 @@
 
 This is a tool to test F5 LTM iRule logic
 
+## Getting Started
+
+**Example normal test:**
+
+        ./test.sh -s www.acme.com
+
+**Example normal output:**
+
+                Testing www.acme.com
+
+        W - 0001 - logic not currently testable
+        P - 0002 - http://www.acme.com/evilpage.html
+                discarded request as expected
+        P - 0003 - http://www.acme.com/original/location1
+                redirects to http://www.24hourfitness.com/new/location1 as expected
+        P - 0004 - http://www.acme.com/original/location2
+                redirects to http://www.24hourfitness.com/new/location2 as expected
+        P - 0005 - http://www.acme.com/index.php
+                selected pool acme_prd_pool as expected
+        P - 0006 - http://www.acme.com/index.html
+                selected pool acme_prd_pool as expected
+
+        Pass: 6, Warn: 1, Fail: 0, Total: 7
+
+        Test took 5 seconds
+
+**Example tap test:**
+
+        ./test.sh -s www.acme.com -o tap
+
+**Example tap output:**
+
+                Testing www.acme.com
+
+        not ok 0001 - #SKIP logic not currently testable
+        ok 0002 - http://www.acme.com/evilpage.html -
+        ok 0003 - http://www.acme.com/original/location1 -
+        ok 0004 - http://www.acme.com/original/location2 -
+        ok 0005 - http://www.acme.com/index.php -
+        ok 0006 - http://www.acme.com/index.html -
+
+        Pass: 6, Warn: 1, Fail: 0, Total: 7
+
+        Test took 5 seconds
+
+Additional testing can be performed by passing the -e option to the testing 
+script.  This will check for an ASM block page, specific sorry content, and 
+check for multiple redirect responses for a given request.  Please read the 
+irule-tester library file for more details.
+
+## Supported Platforms
+
+This code was developed and tested using CentOS 5, but is assumed to work
+on other platforms as well.
+
+## Dependencies
+
+* bash >= 3.2.25
+* curl >= 7.15.5
+
 ## Overview
 
 This utility relies on two required components and has an optional third.  
@@ -26,11 +86,11 @@ you want to test.
 
 **Usage:**
 
-	./test.sh -s target_site [ -o (plain|tap) ]
+	./test.sh -s target_site [ -o (plain|tap) ] [-e]
 
 **Example:**
 
-	./test.sh www.acme.com
+	./test.sh -s www.acme.com
 
 #### Test methods
 
@@ -113,63 +173,6 @@ serve the content for a requested URL
 		HTTP::cookie insert name "LastSelectedPool" value [LB::server pool]
 	
 	}
-
-## Getting Started
-
-**Example normal test:**
-
-	./test.sh -s www.acme.com
-	
-**Example normal output:**
-
-		Testing www.acme.com
-
-	W - 0001 - logic not currently testable
-	P - 0002 - http://www.acme.com/evilpage.html
-		discarded request as expected
-	P - 0003 - http://www.acme.com/original/location1
-		redirects to http://www.24hourfitness.com/new/location1 as expected
-	P - 0004 - http://www.acme.com/original/location2
-		redirects to http://www.24hourfitness.com/new/location2 as expected
-	P - 0005 - http://www.acme.com/index.php
-		selected pool acme_prd_pool as expected
-	P - 0006 - http://www.acme.com/index.html
-		selected pool acme_prd_pool as expected
-	
-	Pass: 6, Warn: 1, Fail: 0, Total: 7
-	
-	Test took 5 seconds
-	
-**Example tap test:**
-
-	./test.sh -s www.acme.com -o tap
-	
-**Example tap output:**
-
-		Testing www.acme.com
-
-	not ok 0001 - #SKIP logic not currently testable
-	ok 0002 - http://www.acme.com/evilpage.html -
-	ok 0003 - http://www.acme.com/original/location1 -
-	ok 0004 - http://www.acme.com/original/location2 -
-	ok 0005 - http://www.acme.com/index.php -
-	ok 0006 - http://www.acme.com/index.html -
-	
-	Pass: 6, Warn: 1, Fail: 0, Total: 7
-	
-	Test took 5 seconds
-
-## Supported Platforms
-
-This code was developed and tested using CentOS 5, but is assumed to work
-on other platforms as well.
-
-
-## Dependencies
-
-* bash >= 3.2.25
-* curl >= 7.15.5
-
 
 ## Author
 
