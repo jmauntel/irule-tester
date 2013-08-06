@@ -312,7 +312,7 @@ function check_for_multiple_redirects {
   local reqUrl=$2
   local count=0
 
-  count=$($curlCmd -L -A "$userAgent" "$reqUrl" -w %{num_redirects} --output /dev/null)
+  count=$($curlCmd -L -A "$userAgent" "$reqUrl" -I -w %{num_redirects} --output /dev/null)
 
   [[ $count -gt 1 ]] && {
     ((warnCount++))
