@@ -142,6 +142,20 @@ will be added as they are required.
 
 ---
 
+`should_redirect_host`
+
+  + Use this method when you need to validate that a given host header should be redirected to a specific destination
+
+**Usage:**
+
+  should\_redirect_host TEST\_CASE\_NUMBER SOURCE\_PARAMETERIZED\_URL HOST\_HEADER DEST\_PARAMETERIZED\_URL
+
+**Example:**
+
+	should_redirect_host 0001 http://${targetSite}/original/location junk.acme.com http://${targetSite}/new/location
+
+---
+
 `should_select_pool`
 
   + Use this method when you need to validate that a given request is sent to a specific pool
@@ -159,7 +173,21 @@ Note: You can also define a variable in the variables section at the top of test
 	acmeContentPools='acme_dev_pool|acme_qa_pool|acme_prd_pool'
 
 	should_select_pool 0001 http://${targetSite}/original/location $acmeContentPools
+---
 
+`should_serve_content`
+
+  + Use this method when you need to validate that given request will cause the F5 to respond directly with content
+
+**Usage:**
+
+  should\_serve\_content TEST\_CASE\_NUMBER SOURCE\_PARAMETERIZED\_URL
+
+**Example:**
+
+	should_serve_content 0001 http://${targetSite}/sorrypage
+
+---
 
 ### - http-response.irule - 
 
