@@ -61,6 +61,7 @@ on other platforms as well.
 
 * bash >= 3.2.25
 * curl >= 7.15.5
+* dos2unix >= 3.1
 
 ## Overview
 

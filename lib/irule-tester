@@ -1,5 +1,5 @@
 #!/bin/bash
-
+ 
 # Most of the variables defined in this library cannot be overridden in the
 # test case file.  Variables that can be overridden are 
 # specifically called out in the comment preceeding the variable.
@@ -10,7 +10,7 @@
 
 # irule-tester version number
 
-typeset -r version='0.3.0'
+typeset -r version='0.4.0'
 
 # Collect the current time to use for test duration calculation
 
@@ -18,11 +18,11 @@ typeset -r startTime=$(date +%s)
 
 # Define output color variables
 
-typeset -r NORMAL='\033[0m'
-typeset -r RED='\033[1;31;40m'
-typeset -r GREEN='\033[1;32;40m'
-typeset -r YELLOW='\033[1;33;40m'
-typeset -r ORANGE='\033[1;38;130m'
+typeset NORMAL='\033[0m'
+typeset RED='\033[1;31;40m'
+typeset GREEN='\033[1;32;40m'
+typeset YELLOW='\033[1;33;40m'
+typeset ORANGE='\033[1;38;130m'
 
 # Maximum number of seconds to wait for curl to successfully connect to a 
 # remote host
@@ -55,25 +55,25 @@ typeset failCount='0'
 
 # Enable/disable checking for custom sorry content page during testing.  
 # Enabling this feature requires a valid value for the sorryText variable and 
-# that the -e switch be passed as an arguement
+# that the -e switch be passed as an argument
 
 typeset -r checkSorry='1'
 
 # Contains the source text that will match when the sorry content is returned
 # from a request.  Requires that the checkSorry variable be set to 1 and 
-# that the -e switch be passed as an arguement
+# that the -e switch be passed as an argument
 
 typeset -r sorryText='Unfortunately, we are not able to process your request at this time. We apologize for any inconvenience'
 
 # Enable/disable checking for custom ASM block page during testing.  
 # Enabling this feature requires a valid value for the asmText variable and 
-# that the -e switch be passed as an arguement
+# that the -e switch be passed as an argument
 
 typeset -r checkAsm='1'
 
 # Contains the source text that will match when the ASM block page is returned
 # from a request.  Requires that the checkASM variable be set to 1 and 
-# that the -e switch be passed as an arguement
+# that the -e switch be passed as an argument
 
 typeset -r asmText='Your request was rejected due to a content exception'
 
@@ -156,7 +156,9 @@ function should_discard {
   }
 }
 
-# This function tests if the requested URL redirects as expected.
+# This function tests if the requested URL redirects as expected.  If the
+# requested URL is discarded, the request will timeout after the number of
+# seconds defined in the connectTimeout variable.
 #
 # Required arguments:
 #   1) Test case ID
@@ -185,7 +187,7 @@ function should_redirect {
     [[ $extendedChecks == 1 ]] && {
 
       [[ $checkAsm == 1 ]] && check_for_asm "$testCase" "$reqUrl" && return
-  
+
       [[ $checkSorry == 1 ]] && check_for_sorry "$testCase" "$reqUrl" && return
 
       [[ $countRedirects == 1 ]] && check_for_multiple_redirects "$testCase" "$reqUrl" && return
@@ -202,7 +204,7 @@ function should_redirect {
     [[ $extendedChecks == 1 ]] && {
 
       [[ $checkAsm == 1 ]] && check_for_asm "$testCase" "$reqUrl" && return
-  
+
       [[ $checkSorry == 1 ]] && check_for_sorry "$testCase" "$reqUrl" && return
 
       [[ $countRedirects == 1 ]] && check_for_multiple_redirects "$testCase" "$reqUrl" && return
@@ -211,6 +213,56 @@ function should_redirect {
 
     return
 
+  }
+}
+
+# This function tests if the requested host header is acceptable.
+#
+# Required arguments:
+#   1) Test case ID
+#   2) The requested URL that should be redirected
+#   3) The host header to use that should be redirected
+#   4) The URL that the requested URL should be redirected to
+
+function should_redirect_host {
+
+  local testCase=$1
+  local reqUrl=$2
+  local hostHeader=$3
+  local destUri=$4
+
+  local redirectResp=$($curlCmd -A "$userAgent" $reqUrl -I -H "Host:${hostHeader}" | egrep "^[Ll]ocation: " | dos2unix)
+  local location=$(echo $redirectResp | sed 's/^[Ll]ocation: //g')
+
+  [[ -z $location ]] && {
+    printMsg "ERROR" "$testCase" "$reqUrl" "redirect failed, could not find 'location' header"
+    ((failCount++))
+    return
+  }
+
+  [[ "$destUri" == "$location" ]] && {
+    printMsg "INFO" "$testCase" "$reqUrl" "redirects to $location as expected"
+    ((passCount++))
+
+      [[ $checkAsm == 1 ]] && check_for_asm "$testCase" "$reqUrl" && return
+
+      [[ $checkSorry == 1 ]] && check_for_sorry "$testCase" "$reqUrl" && return
+
+      [[ $countRedirects == 1 ]] && check_for_multiple_redirects "$testCase" "$reqUrl" && return
+
+    return
+
+  } || {
+    printMsg "ERROR" "$testCase" "$reqUrl" "expected redirect to $destUri but found $location"
+    ((failCount++))
+
+      [[ $checkAsm == 1 ]] && check_for_asm "$testCase" "$reqUrl" && return
+
+      [[ $checkSorry == 1 ]] && check_for_sorry "$testCase" "$reqUrl" && return
+
+      [[ $countRedirects == 1 ]] && check_for_multiple_redirects "$testCase" "$reqUrl" && return
+
+    return
   }
 }
 
@@ -225,7 +277,7 @@ function should_redirect {
 # Required arguments:
 #   1) Test case ID
 #   2) The requested URL that should be sent to a pool
-#   3) A regular expression taht will match the name of the selected pool
+#   3) A regular expression that will match the name of the selected pool
 
 function should_select_pool {
 
@@ -233,13 +285,13 @@ function should_select_pool {
   local reqUrl=$2
   local destPool=$3
 
-  local poolResp=$($curlCmd -A "$userAgent" $reqUrl -I | egrep -o "^Set-Cookie: BIGipServer${destPool}|Set-Cookie: LastSelectedPool=/Common/${destPool}" | dos2unix)
-  local selectedPool=$(echo $poolResp | sed 's/^Set-Cookie: BIGipServer//g' | sed 's/^Set-Cookie: LastSelectedPool=\/Common\///g' | awk '{print $1}')
+  local poolResp=$($curlCmd -A "$userAgent" $reqUrl -I | egrep -o "^Set-Cookie: BIGipServer${destPool}|Set-Cookie: LastSelectedPool=/[A-Z0-9_-]*/${destPool}" | dos2unix)
+  local selectedPool=$(echo $poolResp | sed 's/^Set-Cookie: BIGipServer//g' | sed "s|^Set-Cookie: LastSelectedPool=/[A-Z0-9_-]*/||g" | awk '{print $1}' | grep -v ';')
 
   [[ -z $selectedPool ]] && {
     ((failCount++))
     printMsg "ERROR" "$testCase" "$reqUrl" "failed to find pool selection in header"
-    return 
+    return
 
   } || {
 
@@ -249,13 +301,55 @@ function should_select_pool {
     [[ $extendedChecks == 1 ]] && {
 
       [[ $checkAsm == 1 ]] && check_for_asm $reqUrl && return
-  
+
       [[ $checkSorry == 1 ]] && check_for_sorry $reqUrl && return
 
       [[ $countRedirects == 1 ]] && check_for_multiple_redirects "$testCase" "$reqUrl" && return
 
     }
 
+  }
+
+}
+
+# This function tests if the response to the requested URL is sent from the F5 
+# itself and that the response is a 200 OK.
+#
+# Required arguments:
+#   1) Test case ID
+#   2) The requested URL that should be responded to by the F5 with 200 OK
+
+function should_serve_content {
+
+  local testCase=$1
+  local reqUrl=$2
+
+  local reqResp=$($curlCmd -A "$userAgent" $reqUrl -I | dos2unix)
+  echo $reqResp | egrep -q 'Server: BigIP' && local respSvr='BigIP'
+  echo $reqResp | egrep -q 'HTTP/1.[0-1] 200 OK' && local respCode='200'
+
+  [[ -z $respSvr ]] && {
+    printMsg "ERROR" "$testCase" "$reqUrl" "test failed, could not find 'server' header"
+    ((failCount++))
+    return
+  }
+
+  [[ "$respSvr" != "BigIP" ]] && {
+    printMsg "ERROR" "$testCase" "$reqUrl" "test failed, response not from BigIP"
+    ((failCount++))
+    return
+  }
+
+  [[ "$respCode" != "200" ]] && {
+    printMsg "ERROR" "$testCase" "$reqUrl" "test failed, response code not 200"
+    ((failCount++))
+    return
+  }
+
+  [[ "$respSvr" == "BigIP" ]] && [[ "$respCode" == "200" ]] && {
+    printMsg "INFO" "$testCase" "$reqUrl" "response 200 OK from BigIP, as expected"
+    ((passCount++))
+    return
   }
 
 }
@@ -378,6 +472,7 @@ function printMsg {
 
   [[ "$msgType" == "HEADER" ]] && {
     printf "${NORMAL}\n\t%s\n\n${NORMAL}" "$2"
+    [[ "$outputFormat" == "tap" ]] && echo "1..2"
     return
   }
 
