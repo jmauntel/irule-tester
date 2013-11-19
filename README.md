@@ -52,6 +52,9 @@ script.  This will check for an ASM block page, specific sorry content, and
 check for multiple redirect responses for a given request.  Please read the 
 irule-tester library file for more details.
 
+Debugging can be enabled by passing the -d option.  This will enable Bash 
+debugging and is VERY verbose.  Be warned...
+
 ## Supported Platforms
 
 This code was developed and tested using CentOS 5, but is assumed to work
@@ -87,7 +90,7 @@ you want to test.
 
 **Usage:**
 
-	./test.sh -s target_site [ -o (plain|tap) ] [-e]
+	./test.sh -s target_site [ -o (plain|tap) ] [-e] [-d]
 
 **Example:**
 
@@ -109,6 +112,22 @@ will be added as they are required.
 **Example:**
 
 	cannot_test 0001
+
+---
+
+`header_should_contain`
+
+  + Use this method when you need to validate that the response to a given request contains a specific string in the header 
+
+**Usage:**
+
+  header\_should\_contain TEST\_CASE\_NUMBER PARAMETERIZED\_URL MATCH\_STRING
+
+**Example:**
+
+        header_should_contain 0001 http://${targetSite}/index.html acmeTestHeader
+
+        Note: the $targetSite variable is replaced by the value passed to test.sh with the -s switch
 
 ---
 
@@ -144,15 +163,15 @@ will be added as they are required.
 
 `should_redirect_host`
 
-  + Use this method when you need to validate that a given host header should be redirected to a specific destination
+  + Use this method when you need to validate that a request with a given host header should be redirected to a specific destination
 
 **Usage:**
 
-  should\_redirect_host TEST\_CASE\_NUMBER SOURCE\_PARAMETERIZED\_URL HOST\_HEADER DEST\_PARAMETERIZED\_URL
+  should\_redirect\_host TEST\_CASE\_NUMBER SOURCE\_PARAMETERIZED\_URL HOST\_HEADER DEST\_PARAMETERIZED\_URL
 
 **Example:**
 
-	should_redirect_host 0001 http://${targetSite}/original/location junk.acme.com http://${targetSite}/new/location
+        should_redirect_host 0001 http://${targetSite}/original/location shop.acme.com http://${targetSite}/new/location
 
 ---
 
@@ -168,26 +187,28 @@ will be added as they are required.
 
 	should_select_pool 0001 http://${targetSite}/original/location acme_prd_pool
 
-Note: You can also define a variable in the variables section at the top of test.sh that contains a pipe-delimited list of valid pool names.  This makes the test case portable between different iRule environments, although it introduces the possibility of a passing test result if a dev pool is used by the F5 when you are testing a prd site.
+Note: You can also define a variable in the variables section at the top of test.sh that contains the valid pool name.  This makes the test case portable between different iRule environments.
 
-	acmeContentPools='acme_dev_pool|acme_qa_pool|acme_prd_pool'
+	test $targetSite == "www.acme.com"     && acmePool=acme-prd-pool
+	test $targetSite == "web-qa.acme.com"  && acmePool=acme-qa-pool
+	test $targetSite == "web-dev.acme.com" && acmePool=acme-dev-pool
 
-	should_select_pool 0001 http://${targetSite}/original/location $acmeContentPools
+	should_select_pool 0001 http://${targetSite}/original/location $acmePool
+
 ---
 
 `should_serve_content`
 
-  + Use this method when you need to validate that given request will cause the F5 to respond directly with content
+  + Use this method when you need to validate that a given request is responded to directly by the F5.  A common use case for this is serving sorry content from the F5.
 
 **Usage:**
 
-  should\_serve\_content TEST\_CASE\_NUMBER SOURCE\_PARAMETERIZED\_URL
+  should\_serve\_content TEST\_CASE\_NUMBER PARAMETERIZED\_URL
 
-**Example:**
+**Examples:**
 
-	should_serve_content 0001 http://${targetSite}/sorrypage
+        should_serve_content 0001 http://${targetSite}/sorrypage/index.html
 
----
 
 ### - http-response.irule - 
 

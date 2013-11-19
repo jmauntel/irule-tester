@@ -10,7 +10,7 @@
 
 # irule-tester version number
 
-typeset -r version='0.4.0'
+typeset -r version='0.6.0'
 
 # Collect the current time to use for test duration calculation
 
@@ -90,13 +90,14 @@ typeset -r countRedirects='1'
 function printUsage {
 
    printf "${NORMAL}\nirule-tester, version $version\n\n"
-   printf "Usage: $(basename $0) -s target_site [ -o (plain|tap) ] [-e]\n\n${NORMAL}"
+   printf "Usage: $(basename $0) -s target_site [ -o (plain|tap) ] [-e] [-d]\n\n${NORMAL}"
 
 }
 
 # Parse options
-while getopts ":eo:s:" Option ; do
+while getopts ":deo:s:" Option ; do
   case $Option in
+    d ) debug=1 ;;
     e ) extendedChecks=1 ;;
     o ) outputFormat=${OPTARG} ;;
     s ) targetSite=${OPTARG} ;;
@@ -113,6 +114,16 @@ done
 ( [[ "$outputFormat" == "plain" ]] || [[ "$outputFormat" == "tap" ]] ) && {
   unset NORMAL RED GREEN YELLOW ORANGE
 }
+
+# Verify $targetSite resolves via DNS
+hostName=$(echo $targetSite | awk -F: '{print $1}')
+host $hostName 2>&1 >/dev/null || {
+  printf "${NORMAL}\n$hostName does not resolve via DNS, exiting...\n\n"
+  exit 1
+}
+
+# Enable Bash debug mode
+[[ $debug == 1 ]] && set -x
 
 # ========================
 # Define testing functions
@@ -133,6 +144,33 @@ function cannot_test {
   printMsg "WARN" "$testCase" "logic not currently testable"
 
 }
+
+
+# This function tests if the URL response contains a specific string in the header.  If the
+#
+# Required arguments:
+#   1) Test case ID
+#   2) The requested URL that should result in the expected response
+#   3) The expected response
+
+function header_should_contain {
+
+  local testCase=$1
+  local reqUrl=$2
+  local headerContains=$3
+
+  local reqResp=$($curlCmd -A "$userAgent" $reqUrl -I | egrep "$headerContains" | dos2unix)
+
+  [[ -z $reqResp ]] && {
+    ((failCount++))
+    printMsg "ERROR" "$testCase" "$reqUrl" "The expected string was not found in the header"
+    return
+  } || {
+    ((passCount++))
+    printMsg "INFO" "$testCase" "$reqUrl" "found $headerContains in the header as expected"
+  }
+}
+
 
 # This function tests if the requested URL is discarded by the F5.  If the
 # requested URL is discarded, the request will timeout after the number of
@@ -285,8 +323,8 @@ function should_select_pool {
   local reqUrl=$2
   local destPool=$3
 
-  local poolResp=$($curlCmd -A "$userAgent" $reqUrl -I | egrep -o "^Set-Cookie: BIGipServer${destPool}|Set-Cookie: LastSelectedPool=/[A-Z0-9_-]*/${destPool}" | dos2unix)
-  local selectedPool=$(echo $poolResp | sed 's/^Set-Cookie: BIGipServer//g' | sed "s|^Set-Cookie: LastSelectedPool=/[A-Z0-9_-]*/||g" | awk '{print $1}' | grep -v ';')
+  local poolResp=$($curlCmd -A "$userAgent" $reqUrl -I | egrep -o "^Set-Cookie: BIGipServer${destPool}|Set-Cookie: LastSelectedPool=/[A-Za-z0-9_-]*/${destPool}" | dos2unix)
+  local selectedPool=$(echo $poolResp | sed 's/^Set-Cookie: BIGipServer//g' | sed "s|^Set-Cookie: LastSelectedPool=/[A-Za-z0-9_-]*/||g" | awk '{print $1}' | grep -v ';')
 
   [[ -z $selectedPool ]] && {
     ((failCount++))

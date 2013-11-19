@@ -9,7 +9,9 @@ display_header
 
 # ----- BEGIN APP SPECIFIC VARS -----
 
-acmeContentPools='acme_dev_pool|acme_qa_pool|acme_prd_pool'
+test $targetSite == "www.acme.com"     && acmePool=acme-prd-pool
+test $targetSite == "web-qa.acme.com"  && acmePool=acme-qa-pool
+test $targetSite == "web-dev.acme.com" && acmePool=acme-dev-pool
 
 # ----- BEGIN TESTS -----
 
@@ -20,8 +22,7 @@ should_discard 0002 http://${targetSite}/evilpage.html
 should_redirect 0003 http://${targetSite}/original/location1 http://${targetSite}/new/location2
 should_redirect 0004 http://${targetSite}/original/location2 https://${targetSite}/new/location2
 
-should_select_pool 0005 http://${targetSite}/index.php acme_prd_pool
-should_select_pool 0006 http://${targetSite}/index.html $acmeContentPools
+should_select_pool 0005 http://${targetSite}/index.php $acmePool
 
 # ----- REPORT TEST RESULTS -----
 
